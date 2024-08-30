@@ -1,0 +1,2 @@
+BusStopID=8002626
+BusStopArs=43390
