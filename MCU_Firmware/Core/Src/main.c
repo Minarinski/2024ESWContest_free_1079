@@ -289,21 +289,21 @@ void Flash_Write(uint32_t address, uint8_t data) {
 	while (FLASH->SR & FLASH_SR_BSY)
 		;  // Busy flag 체크
 
-	FLASH->CR |= FLASH_CR_PG;  // Programming mode ?��?��
+	FLASH->CR |= FLASH_CR_PG;  // Programming mode
 
-	*(__IO uint16_t*) address = data;  // ?��?��?�� 기록
+	*(__IO uint16_t*) address = data;  // data 기록
 
 	while (FLASH->SR & FLASH_SR_BSY)
 		;  // Busy flag 체크
 
-	FLASH->CR &= ~FLASH_CR_PG;  // Programming mode ?��?��
+	FLASH->CR &= ~FLASH_CR_PG;  // Programming mode
 }
 
 void Flash_Write_StrInt(uint32_t address, uint8_t *StrData) {
-	Flash_Unlock();  // ?��?��?�� 메모�????? ?��?��
+	Flash_Unlock();  // flash 사용 가능
 	uint16_t value = (uint16_t) strtol((const char*) StrData, NULL, 10);
-	Flash_Write(address, value);  // ?��?�� 값을 ?��?��?�� 메모리에 ???��
-	Flash_Lock();  // ?��?��?�� 메모�????? ?���?????
+	Flash_Write(address, value);  // value 값 address에 넣기
+	Flash_Lock();  // flash 사용 제한
 }
 
 uint32_t Flash_Write_Char(uint32_t address, uint8_t CharData) {
@@ -385,22 +385,22 @@ uint32_t Flash_Write_Data(uint32_t address, uint8_t *StrData) {
 }
 
 uint16_t Flash_Read(uint32_t address) {
-	return *(__IO uint16_t*) address; // �??????��?�� ?��?��?�� 메모�????? 주소?��?�� ?��?��?�� ?���?????
+	return *(__IO uint16_t*) address; // address data return
 }
 
 void Flash_Erase_Page(uint32_t address) {
-	Flash_Unlock();  // ?��?��?�� 메모�????? ?��?��
+	Flash_Unlock();  // flash 사용 가능
 
-	FLASH->CR |= FLASH_CR_PER;   // Page Erase 비트 ?��?��
-	FLASH->AR = address;         // �??????�� ?��?���??????�� 주소 ?��?��
-	FLASH->CR |= FLASH_CR_STRT;  // Erase ?��?��
+	FLASH->CR |= FLASH_CR_PER;   // Page Erase bit set
+	FLASH->AR = address;         // Page Erase address
+	FLASH->CR |= FLASH_CR_STRT;
 
 	while (FLASH->SR & FLASH_SR_BSY)
-		;  // ?��?��?�� ?��료될 ?��까�? ??�?????
+		;  // page Erase end
 
-	FLASH->CR &= ~FLASH_CR_PER;  // Page Erase 비트 ?��?��
+	FLASH->CR &= ~FLASH_CR_PER;  // Page Erase bit reset
 
-	Flash_Lock();  // ?��?��?�� 메모�????? ?���?????
+	Flash_Lock();  // flash 사용 제한
 }
 
 void splitData(char *strData) {
@@ -470,22 +470,16 @@ double convertToDecimalDegrees(const char *coordinate, char type) {
 	double decimalDegrees;
 
 	if (type == 'L') { // Latitude
-		// �??? ?�� ?���??? (?��)
 		degrees = (coordinate[0] - '0') * 10 + (coordinate[1] - '0'); // dd
-		// ?��머�? �???�??? (�???)
 		minutes = atof(coordinate + 2); // mm.mmmm
 	} else if (type == 'G') { // Longitude
-		// �??? ?�� ?���??? (?��)
 		degrees = (coordinate[0] - '0') * 100 + (coordinate[1] - '0') * 10
 				+ (coordinate[2] - '0'); // ddd
-		// ?��머�? �???�??? (�???)
 		minutes = atof(coordinate + 3); // mm.mmmm
 	} else {
 		printf("Invalid type\n");
 		return -1;
 	}
-
-	// ?��?��?�� �???�??? 계산
 	decimalDegrees = degrees + (minutes / 60.0);
 
 	return decimalDegrees;
@@ -495,40 +489,32 @@ void parseGPSData(uint8_t *buffer, uint16_t size) {
 	char *nmeaGGA = NULL;
 	double la, lo;
 	//xprintf("%s", (char*)buffer);
-	// DMA 버퍼?��?�� $GPGGA 문자?��?�� �?????��
 	nmeaGGA = strstr((char*) buffer, "GLL");
 	if (nmeaGGA != NULL) {
 		char *token;
 
-		// NMEA 메시�???? ?��?��?��
 		token = strtok(nmeaGGA, ",");
 
-//        // UTC ?���???? (무시)
-//        token = strtok(NULL, ",");
 
-		// ?��?��
-		token = strtok(NULL, ",");
+		token = strtok(NULL, ","); //latitude
 		if (token != NULL) {
 			strncpy(latitude, token, sizeof(latitude) - 1);
 			latitude[sizeof(latitude) - 1] = '\0';
 			la = convertToDecimalDegrees(latitude, 'L');
 		}
 
-		// N/S ?��?��
 		token = strtok(NULL, ",");
 
-		// 경도
-		token = strtok(NULL, ",");
+
+		token = strtok(NULL, ","); //longitude
 		if (token != NULL) {
 			strncpy(longitude, token, sizeof(longitude) - 1);
 			longitude[sizeof(longitude) - 1] = '\0';
 			lo = convertToDecimalDegrees(longitude, 'G');
 		}
 
-		// E/W ?��?��
 		token = strtok(NULL, ",");
 
-		// ?��?��?�� 결과�???? ?��버그 출력
 		printf("\r\nLatitude: %.6f, Longitude: %.6f\r\n", la, lo);
 		if (la >= 200 || lo >= 200) {
 			GPSLEDFlag = 0;
@@ -591,9 +577,9 @@ void NowBusStop(double nowLati, double nowLongi) {
 //LoRa
 #define LoRa_RX_BUFFER_SIZE 64
 
-uint8_t LoRaRxBuffer[LoRa_RX_BUFFER_SIZE]; // ?��?�� ?��?��?���??? ???��?�� 버퍼
-volatile uint8_t LoRaRxEnd = 0; // ?��?��?�� ?��?�� ?���??? ?��?���???
-uint8_t LoRaRxData[11]; // ?��?�� ?��?��?���??? ???��?�� 버퍼
+uint8_t LoRaRxBuffer[LoRa_RX_BUFFER_SIZE];
+volatile uint8_t LoRaRxEnd = 0;
+uint8_t LoRaRxData[11];
 uint8_t LoRaLen = 0;
 
 void SetMode(uint8_t mode) {
@@ -618,11 +604,10 @@ void SetMode(uint8_t mode) {
 }
 
 void LoRa_SendData(uint8_t *data, uint16_t length) {
-	// AUX ???�� HIGH ?��?��?���??? ?��?��?��?�� 모듈?�� �???비되?��?���??? ?��?��
+	// AUX
 	while (HAL_GPIO_ReadPin(LORA_AUX_GPIO_Port, LORA_AUX_Pin) == GPIO_PIN_RESET)
 		;
 
-	// ?��?��?�� ?��?��
 	HAL_UART_Transmit(&huart2, data, length, HAL_MAX_DELAY);
 }
 
@@ -805,9 +790,9 @@ int main(void)
 //	LCD_SendData(LCD_ADDR, 1);
 
 	//flash
-	uint32_t GPSRangeFlashAddress = 0x0800C400; // ???��?�� ?��?��?�� 메모�????? 주소
-	uint32_t ModeFlashAddress = 0x0800CB00;  // ???��?�� ?��?��?�� 메모�????? 주소
-	uint32_t DataFlashAddress = 0x0800CC00; // ???��?�� ?��?��?�� 메모�????? 주소
+	uint32_t GPSRangeFlashAddress = 0x0800C400;
+	uint32_t ModeFlashAddress = 0x0800CB00;
+	uint32_t DataFlashAddress = 0x0800CC00;
 	uint16_t InfoModeFlag = Flash_Read(ModeFlashAddress) & 0x0000FFFF;
 	GPSRange = Flash_Read(GPSRangeFlashAddress) & 0x0000FFFF;
 	printf("Range : %d!!!!!!!!!!!!!!!!\r\n", GPSRange);
@@ -934,10 +919,10 @@ int main(void)
 						LoRaRxData[i] = '\0';
 					}
 					LoRaLen = 0;
-					LoRaRxEnd = 0; // ?��?�� ?���??? ?��?���??? 리셋
+					LoRaRxEnd = 0;
 				}
 
-				if (InfoModeFlag) { //?��?��모드?��?��
+				if (InfoModeFlag) {
 					if (dataReceived) {
 						parseGPSData(rxBuffer, RX3_BUFFER_SIZE);
 						dataReceived = 0;
@@ -1079,7 +1064,7 @@ int main(void)
 						LoRaRxData[i] = '\0';
 					}
 					LoRaLen = 0;
-					LoRaRxEnd = 0; // ?��?�� ?���??? ?��?���??? 리셋
+					LoRaRxEnd = 0;
 				}
 				if (HAL_GetTick() - LoRaTick >= 3000 && uartLoraFlag == 1) {
 					LoRaTick = HAL_GetTick();
