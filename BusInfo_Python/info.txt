@@ -1,2 +1,2 @@
-BusStopID=8002626
-BusStopArs=43390
+BusStopID=8001418
+BusStopArs=12400

@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
+print(os.getcwd())
+os.chdir('C:/Users/DSM2022/Documents/2024ESWContest_free_1079/BusInfo_Python')
+print(os.getcwd())
 import requests
 import xmltodict
 import time
@@ -96,14 +100,18 @@ class SerialThread(QThread):
 
     def __init__(self, serial_port, pageFlag, BusStopArs):
         super().__init__()
-        self.ser = serial.Serial(
-            port=serial_port, 
-            baudrate=115200, 
-            parity='N',
-            stopbits=1,
-            bytesize=8,
-            timeout=8
-        )
+        try:
+            self.ser = serial.Serial(
+                port=serial_port, 
+                baudrate=115200, 
+                parity='N',
+                stopbits=1,
+                bytesize=8,
+                timeout=8
+            )
+        except:
+            print('Serial port open error')
+            self.ser = None
         self.pageFlag = pageFlag
         self.BoardingNumList = []
         self.BusStopArs = BusStopArs
@@ -116,7 +124,7 @@ class SerialThread(QThread):
         stx = stx.to_bytes(1)
         etx = 3
         etx = etx.to_bytes(1)
-        while True:
+        while self.ser:
             if self.ser.in_waiting > 0:
                 data = self.ser.readline().decode('utf-8').rstrip()
                 print(data)
@@ -277,7 +285,7 @@ class BusArrivalApp(QtWidgets.QDialog):
         self.nowArriveList = []
         
         self.getKey("key.txt")
-        self.getInfo("info.txt")
+        self.getInfo("./info.txt")
 
         # QThreads
         self.api_thread = ApiThread(self.key, self.BusStopID, self.BusStopArs)
@@ -313,23 +321,30 @@ class BusArrivalApp(QtWidgets.QDialog):
         self.showMaximized()
 
     def getInfo(self, filename):
-        with open(filename, 'r') as f:
-            lines = f.readlines()
-            d = {}
-            for line in lines:
-                a, b = line.split('=')
-                d[a] = b.strip()
-            self.BusStopID = d['BusStopID']
-            self.BusStopArs = d['BusStopArs']
+        print(filename)
+        try:
+            with open(filename, 'r') as f:
+                lines = f.readlines()
+                d = {}
+                for line in lines:
+                    a, b = line.split('=')
+                    d[a] = b.strip()
+                self.BusStopID = d['BusStopID']
+                self.BusStopArs = d['BusStopArs']
+        except:
+            print("info.txt file not found.")
             
     def getKey(self, filename):
-        with open(filename, 'r') as f:
-            lines = f.readlines()
-            d = {}
-            for line in lines:
-                a, b = line.split('=')
-                d[a] = b.strip()
-            self.key = d['key']
+        try:
+            with open(filename, 'r') as f:
+                lines = f.readlines()
+                d = {}
+                for line in lines:
+                    a, b = line.split('=')
+                    d[a] = b.strip()
+                self.key = d['key']
+        except:
+            print("key.txt file not found.")
 
     def updateArriveInfo(self, ArriveInfoList):
         self.ArriveInfoList = ArriveInfoList
