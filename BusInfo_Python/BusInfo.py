@@ -18,11 +18,7 @@ from BusInfoPyQt import *
 import pyttsx3
 
 flag = 0
-GlobalArriveInfoList = [{
-                    'ROUTE_NO': '999', 'DESTINATION': '', 'EXTIME_MIN': '',
-                    'MSG_TP': '', 'BusStopNm': '', 'CarNM': '', 'RouteID': '', 'isLowFloor': '0',
-                    'isSpeaked': 0
-                } for _ in range(20)]
+GlobalArriveInfoList = []
 GlobalBoardsList = []
 speakList = []
 speakBordingList = []
@@ -74,6 +70,7 @@ class ApiThread(QThread):
                     CarNM = ArriveInfo['CAR_REG_NO']
                 
                 global GlobalArriveInfoList
+                isSpeaked = GlobalArriveInfoList[idx]['isSpeaked'] if idx < len(GlobalArriveInfoList) else 0
                 ArriveInfoListBefore.append([ArriveInfo['ROUTE_NO'], {
                     'ROUTE_NO': ArriveInfo['ROUTE_NO'],
                     'DESTINATION': ArriveInfo['DESTINATION'],
@@ -83,7 +80,7 @@ class ApiThread(QThread):
                     'CarNM': CarNM,
                     'RouteID': RouteID,
                     'isLowFloor': '0',
-                    'isSpeaked': GlobalArriveInfoList[idx]['isSpeaked']
+                    'isSpeaked': isSpeaked
                 }])
             ArriveInfoListBefore.sort()
             ArriveInfoList = [item[1] for item in ArriveInfoListBefore]
@@ -95,8 +92,7 @@ class ApiThread(QThread):
             while len(ArriveInfoList) % 5 != 0:
                 ArriveInfoList.append({
                     'ROUTE_NO': '999', 'DESTINATION': '', 'EXTIME_MIN': '',
-                    'MSG_TP': '', 'BusStopNm': '', 'CarNM': '', 'RouteID': '', 'isLowFloor': '0',
-                    'isSpeaked': 0
+                    'MSG_TP': '', 'BusStopNm': '', 'CarNM': '', 'RouteID': '', 'isLowFloor': '0'
                 })
             
             
@@ -453,12 +449,14 @@ class BusArrivalApp(QtWidgets.QDialog):
         self.labelList[i]['Route'].setText(self.ArriveInfoList[idx]['ROUTE_NO'])
         self.labelList[i]['Destination'].setText(self.ArriveInfoList[idx]['DESTINATION'])
         self.labelList[i]['Location'].setText(self.ArriveInfoList[idx]['BusStopNm'])
+        
         if self.ArriveInfoList[idx]['MSG_TP'] == '07':
             self.labelList[i]['Minute'].setStyleSheet("color: rgb(255, 255, 255);")
             self.labelList[i]['Minute'].setText('운행대기')
             if GlobalArriveInfoList[idx]['ROUTE_NO'] in self.nowArriveList:
                 self.nowArriveList.remove(GlobalArriveInfoList[idx]['ROUTE_NO'])
                 GlobalArriveInfoList[idx]['isSpeaked'] = 0
+                
         elif self.ArriveInfoList[idx]['MSG_TP'] == '06':
             if GlobalArriveInfoList[idx]['ROUTE_NO'] not in self.nowArriveList:
                 self.nowArriveList.append(GlobalArriveInfoList[idx]['ROUTE_NO'])
