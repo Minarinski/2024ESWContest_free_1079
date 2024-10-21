@@ -378,8 +378,14 @@ class Ui_Dialog(object):
         self.label_35.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.label_35.setObjectName("label_35")
         self.cnt_down = QtWidgets.QLabel(Dialog)
-        self.cnt_down.setGeometry(QtCore.QRect(20, 20, 64, 15))
-        self.cnt_down.setText("")
+        self.cnt_down.setGeometry(QtCore.QRect(20, 20, 64, 41))
+        font = QtGui.QFont()
+        font.setFamily("맑은 고딕")
+        font.setPointSize(20)
+        font.setBold(True)
+        font.setWeight(75)
+        self.cnt_down.setFont(font)
+        self.cnt_down.setStyleSheet("color: rgb(0, 0, 255);")
         self.cnt_down.setObjectName("cnt_down")
 
         self.retranslateUi(Dialog)
@@ -391,6 +397,7 @@ class Ui_Dialog(object):
         self.label_22.setText(_translate("Dialog", "네트워크 연결 중 입니다."))
         self.label_23.setText(_translate("Dialog", "TextLabel"))
         self.label_24.setText(_translate("Dialog", "TextLabel"))
+        self.cnt_down.setText(_translate("Dialog", "5"))
 import resources_rc
 
 

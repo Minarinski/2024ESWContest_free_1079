@@ -28,6 +28,7 @@ speakList = []
 speakBordingList = []
 
 cntDownNum = 5
+pageFix = False
 
 class ApiThread(QThread):
     update_arrive_info = pyqtSignal(list)
@@ -208,10 +209,10 @@ class PageFlagThread(QThread):
         self.pageFlag = 0
 
     def run(self):
-        global flag
+        global flag, pageFix
         while True:
             time.sleep(4)
-            if self.pageCnt != 0:
+            if self.pageCnt != 0 and pageFix == 0:
                 self.pageFlag = (self.pageFlag + 1) % self.pageCnt
             self.update_page_flag.emit(self.pageFlag)
             flag = self.pageFlag
@@ -342,6 +343,18 @@ class BusArrivalApp(QtWidgets.QDialog):
         self.ui.setupUi(self)
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
         self.showMaximized()
+    
+    def  keyPressEvent(self, e):
+        if e.key() == 32:
+            global pageFix
+            if pageFix:
+                pageFix = False
+                self.ui.cnt_down.setStyleSheet("color: rgb(0, 0, 255);")
+            else:
+                pageFix = True
+                self.ui.cnt_down.setStyleSheet("color: rgb(255, 0, 0);")
+        elif e.key() == QtCore.Qt.Key_Escape:
+            self.closeEvent()
 
     def getInfo(self, filename):
         print(filename)
@@ -410,6 +423,7 @@ class BusArrivalApp(QtWidgets.QDialog):
         self.ui.label_23.setText(f"{self.now.month}월 {self.now.day}일")
         self.ui.label_24.setText(f"{self.now.hour:02d}:{self.now.minute:02d}")
         self.ui.cnt_down.setText(f"{self.cnt}")
+        
         
         for i in range(5):
             idx = i + (5 * self.pageFlag)

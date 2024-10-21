@@ -879,11 +879,22 @@
      <x>20</x>
      <y>20</y>
      <width>64</width>
-     <height>15</height>
+     <height>41</height>
     </rect>
    </property>
+   <property name="font">
+    <font>
+     <family>맑은 고딕</family>
+     <pointsize>20</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: rgb(0, 0, 255);</string>
+   </property>
    <property name="text">
-    <string/>
+    <string>5</string>
    </property>
   </widget>
  </widget>
