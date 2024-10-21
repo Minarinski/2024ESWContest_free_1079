@@ -264,7 +264,7 @@ class SpeakThread(QThread):
         self.engine.runAndWait()
     
     def run(self):
-        global speakList
+        global speakList, cntDownNum
         while True:
             if speakBordingList:
                 self.speak(speakBordingList.pop(0))
@@ -273,7 +273,9 @@ class SpeakThread(QThread):
                 cntDownNum = 5
                 for i in range(5):
                     time.sleep(1)
+                    print(f"cnt! : {cntDownNum}")
                     cntDownNum -= 1
+                    print(f"{cntDownNum}")
                 self.speak(speakList.pop(0))
                 
 
@@ -329,7 +331,7 @@ class BusArrivalApp(QtWidgets.QDialog):
         # GUI 업데이트를 위한 타이머
         self.timer = QTimer()
         self.timer.timeout.connect(self.updateGui)
-        self.timer.start(1000)  # 1초마다 업데이트
+        self.timer.start(500)  # 1초마다 업데이트
         
         self.speakTimer = QTimer()
         self.speakTimer.timeout.connect(self.guideSound)
@@ -403,9 +405,11 @@ class BusArrivalApp(QtWidgets.QDialog):
 
     def updateGui(self):
         self.now = datetime.now()
+        global cntDownNum
+        self.cnt = cntDownNum
         self.ui.label_23.setText(f"{self.now.month}월 {self.now.day}일")
         self.ui.label_24.setText(f"{self.now.hour:02d}:{self.now.minute:02d}")
-        self.ui.cnt_down.setText(f"{cntDownNum}");
+        self.ui.cnt_down.setText(f"{self.cnt}")
         
         for i in range(5):
             idx = i + (5 * self.pageFlag)
