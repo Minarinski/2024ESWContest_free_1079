@@ -27,6 +27,8 @@ GlobalBoardsList = []
 speakList = []
 speakBordingList = []
 
+cntDownNum = 5
+
 class ApiThread(QThread):
     update_arrive_info = pyqtSignal(list)
 
@@ -268,7 +270,10 @@ class SpeakThread(QThread):
                 self.speak(speakBordingList.pop(0))
                 
             elif speakList:
-                time.sleep(5)
+                cntDownNum = 5
+                for i in range(5):
+                    time.sleep(1)
+                    cntDownNum -= 1
                 self.speak(speakList.pop(0))
                 
 
@@ -289,7 +294,7 @@ class BusArrivalApp(QtWidgets.QDialog):
             'image/AD/1.png', 'image/AD/2.png', 'image/AD/3.png',
             'image/AD/4.png', 'image/AD/5.png'
         ]
-        
+        self.backGroundImage = self.ui.label.setPixmap(QtGui.QPixmap("image/asset/background.png"))
         self.labelList = [{'Route': self.ui.label_2, 'Destination': self.ui.label_3, 'Minute': self.ui.label_4, 'Location': self.ui.label_5, 'Icon': self.ui.label_25},
                     {'Route': self.ui.label_6, 'Destination': self.ui.label_7, 'Minute': self.ui.label_8, 'Location': self.ui.label_9, 'Icon': self.ui.label_26},
                     {'Route': self.ui.label_10, 'Destination': self.ui.label_11, 'Minute': self.ui.label_12, 'Location': self.ui.label_13, 'Icon': self.ui.label_27},
@@ -400,6 +405,7 @@ class BusArrivalApp(QtWidgets.QDialog):
         self.now = datetime.now()
         self.ui.label_23.setText(f"{self.now.month}월 {self.now.day}일")
         self.ui.label_24.setText(f"{self.now.hour:02d}:{self.now.minute:02d}")
+        self.ui.cnt_down.setText(f"{cntDownNum}");
         
         for i in range(5):
             idx = i + (5 * self.pageFlag)

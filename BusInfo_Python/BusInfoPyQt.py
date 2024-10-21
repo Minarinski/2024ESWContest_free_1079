@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '.\pyqt_test.ui'
+# Form implementation generated from reading ui file '.\BusInfoPyQt.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.10
 #
@@ -9,8 +9,7 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-import sys
-sys.path.append('.')
+
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -19,7 +18,7 @@ class Ui_Dialog(object):
         self.label = QtWidgets.QLabel(Dialog)
         self.label.setGeometry(QtCore.QRect(0, 0, 1081, 1921))
         self.label.setText("")
-        self.label.setPixmap(QtGui.QPixmap("image/asset/background.png"))
+        self.label.setPixmap(QtGui.QPixmap(":/Background/image/asset/background.png"))
         self.label.setScaledContents(True)
         self.label.setObjectName("label")
         self.label_2 = QtWidgets.QLabel(Dialog)
@@ -85,7 +84,7 @@ class Ui_Dialog(object):
         self.label_7.setGeometry(QtCore.QRect(270, 460, 231, 121))
         font = QtGui.QFont()
         font.setFamily("나눔고딕")
-        font.setPointSize(22)
+        font.setPointSize(28)
         font.setBold(True)
         font.setWeight(75)
         self.label_7.setFont(font)
@@ -270,7 +269,7 @@ class Ui_Dialog(object):
         self.label_22.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.label_22.setObjectName("label_22")
         self.label_23 = QtWidgets.QLabel(Dialog)
-        self.label_23.setGeometry(QtCore.QRect(920, -10, 141, 121))
+        self.label_23.setGeometry(QtCore.QRect(900, -10, 161, 121))
         font = QtGui.QFont()
         font.setFamily("나눔고딕")
         font.setPointSize(20)
@@ -281,7 +280,7 @@ class Ui_Dialog(object):
         self.label_23.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.label_23.setObjectName("label_23")
         self.label_24 = QtWidgets.QLabel(Dialog)
-        self.label_24.setGeometry(QtCore.QRect(920, 30, 141, 121))
+        self.label_24.setGeometry(QtCore.QRect(890, 30, 171, 121))
         font = QtGui.QFont()
         font.setFamily("나눔고딕")
         font.setPointSize(20)
@@ -378,6 +377,10 @@ class Ui_Dialog(object):
         self.label_35.setTextFormat(QtCore.Qt.AutoText)
         self.label_35.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.label_35.setObjectName("label_35")
+        self.cnt_down = QtWidgets.QLabel(Dialog)
+        self.cnt_down.setGeometry(QtCore.QRect(20, 20, 64, 15))
+        self.cnt_down.setText("")
+        self.cnt_down.setObjectName("cnt_down")
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -393,7 +396,6 @@ import resources_rc
 
 if __name__ == "__main__":
     import sys
-    sys.path.append('.')
     app = QtWidgets.QApplication(sys.argv)
     Dialog = QtWidgets.QDialog()
     ui = Ui_Dialog()
