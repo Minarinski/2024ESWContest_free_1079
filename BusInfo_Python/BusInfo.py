@@ -443,7 +443,7 @@ class BusArrivalApp(QtWidgets.QDialog):
         self.labelList[i]['Location'].setText('')
 
     def updateRouteInfo(self, i, idx):
-        global GlobalBoardsList
+        global GlobalBoardsList, GlobalArriveInfoList
         
         if self.ArriveInfoList[idx]['ROUTE_NO'][:2] == '마을' or len(self.ArriveInfoList[idx]['ROUTE_NO']) == 1:
             self.labelList[i]['Icon'].setPixmap(QtGui.QPixmap("image/asset/maeul.png"))
