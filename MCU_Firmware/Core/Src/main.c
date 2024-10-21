@@ -68,6 +68,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 
 /* USER CODE BEGIN PV */
 struct DataFlash {
+	char busTP;
 	char busNM[5];
 	char busRouteno[5];
 	char busStopID[8];
@@ -300,10 +301,10 @@ void Flash_Write(uint32_t address, uint8_t data) {
 }
 
 void Flash_Write_StrInt(uint32_t address, uint8_t *StrData) {
-	Flash_Unlock();  // flash 사용 가능
+	Flash_Unlock();  // flash ?��?�� �??��
 	uint16_t value = (uint16_t) strtol((const char*) StrData, NULL, 10);
-	Flash_Write(address, value);  // value 값 address에 넣기
-	Flash_Lock();  // flash 사용 제한
+	Flash_Write(address, value);  // value �? address?�� ?���?
+	Flash_Lock();  // flash ?��?�� ?��?��
 }
 
 uint32_t Flash_Write_Char(uint32_t address, uint8_t CharData) {
@@ -326,6 +327,13 @@ uint32_t Flash_Write_Data(uint32_t address, uint8_t *StrData) {
 
 	token = strtok(StrData, ",");
 	if (token[0] == 'D') {
+		token = strtok(NULL, ",");
+		if (token != NULL) {
+			data[dataIdx].busTP = token[0];
+			address = Flash_Write_Char(address, data[dataIdx].busTP);
+			address = Flash_Write_Char(address, ',');
+		}
+
 		token = strtok(NULL, ",");
 		if (token != NULL) {
 			strncpy(data[dataIdx].busNM, token,
@@ -389,7 +397,7 @@ uint16_t Flash_Read(uint32_t address) {
 }
 
 void Flash_Erase_Page(uint32_t address) {
-	Flash_Unlock();  // flash 사용 가능
+	Flash_Unlock();  // flash ?��?�� �??��
 
 	FLASH->CR |= FLASH_CR_PER;   // Page Erase bit set
 	FLASH->AR = address;         // Page Erase address
@@ -400,13 +408,16 @@ void Flash_Erase_Page(uint32_t address) {
 
 	FLASH->CR &= ~FLASH_CR_PER;  // Page Erase bit reset
 
-	Flash_Lock();  // flash 사용 제한
+	Flash_Lock();  // flash ?��?�� ?��?��
 }
 
 void splitData(char *strData) {
 	char *token;
 
-	token = strtok(strData, ","); // CarNM
+	token = strtok(strData, ","); // TP
+	data[dataIdx].busTP = token[0];
+
+	token = strtok(NULL, ","); // CarNM
 	strncpy(data[dataIdx].busNM, token, sizeof(data[dataIdx].busNM) - 1);
 
 	token = strtok(NULL, ","); // RouteNo
@@ -616,6 +627,8 @@ int routeNo = 0;
 int busNM = 0;
 int arsID = 0;
 
+int loraFlag = 0;
+
 void parseLora(uint8_t *loraData) {
 
 	if (loraData[1] == '0') {
@@ -637,6 +650,7 @@ void parseLora(uint8_t *loraData) {
 			if (atoi(data[i].busStopID) == arsID) {
 				data[i].isPeople = help;
 				printf("\r\n%d\r\n\r\n", i);
+				loraFlag = 1;
 //				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
 //				HAL_Delay(100);
 //				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
@@ -830,6 +844,8 @@ int main(void)
 	//LoRa ================================================================
 	SetMode(0);
 
+
+
 	//FW===================================================================
 	modeFlag = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
 
@@ -840,6 +856,11 @@ int main(void)
 
 	uint8_t IOMode = 0; //0 : In, 1 : Out
 	uint8_t ArriveFlag = 0;
+
+	int isPeopleFlag = 0;
+	while(strncmp(data[nowIdx++].busStopID, "12400", 5) != 0);
+	nowIdx--;
+	updateLCD();
 
   /* USER CODE END 2 */
 
@@ -852,9 +873,11 @@ int main(void)
 //		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
 
 		if (!modeFlag) { //Local Mode
-			if (InfoModeFlag >= 1) {
-				notGPSLCD();
-			}
+//			if (InfoModeFlag >= 1) {
+//				notGPSLCD();
+//			}
+
+
 			while (1) {
 				if (UART1_Rx_End) {
 					//printf("Echo: %s\r\n", UART1_Rx_Buffer);
@@ -883,7 +906,7 @@ int main(void)
 						LCD_SendString(LCD_ADDR, "DATA DOWNLOAD");
 						LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
 						LCD_SendString(LCD_ADDR, "SUCCESS");
-					} else if ((!strncmp(UART1_Rx_Buffer, "Data", 4)
+					} else if ((!strncmp(UART1_Rx_Buffer, "Da", 2)
 							|| !strncmp(UART1_Rx_Buffer, "d", 1))
 							&& InfoModeFlag == 0) {
 						DataFlashAddress = Flash_Write_Data(DataFlashAddress,
@@ -920,170 +943,238 @@ int main(void)
 					}
 					LoRaLen = 0;
 					LoRaRxEnd = 0;
+
 				}
 
 				if (InfoModeFlag) {
-					if (dataReceived) {
-						parseGPSData(rxBuffer, RX3_BUFFER_SIZE);
-						dataReceived = 0;
-					}
-					if (HAL_GetTick() - GPSTick >= 1000) {
-						GPSTick = HAL_GetTick();
-						//printf("CNT : %d\r\n", checkGPSCnt);
-						if (checkGPSCnt >= 2) {
-							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
-							if (IOMode == 0) {
-								LCD_Write_Arrive(data[nowIdx]);
-								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
-								ArriveFlag = 1;
-								helpBuzzer = 0;
-							}
-
-							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13); //Stop LED
-							IOMode = 1;
-						} else {
-							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
-							if (IOMode == 1) {
-								nowIdx++;
-								updateLCD();
-								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
-								ArriveFlag = 0;
-							}
-
-							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0); //Stop LED
-							IOMode = 0;
+					if(loraFlag == 1){
+						loraFlag = 0;
+						if(data[nowIdx].isPeople == 2){
+							helpBuzzer = 0;
 						}
-						checkGPSCnt = 0;
-					}
-
-					if (HAL_GetTick() - GPSFIXTick >= 100) {
-						//printf("%s\r\n", DataBuffer);
-						nmea_parse(&myData, DataBuffer);
-						if (myData.fix == 0) {
-							GPSFIXTick = HAL_GetTick();
-							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
-							//printf("%d: No fix\r\n", Serialcnt);
-							Serialcnt++;
-						} else {
-							if (NowBusStopFlag == 0) {
-								if (myData.latitude > 0
-										&& myData.longitude > 0) {
-
-									//printf("%f, %f\r\n", myData.latitude, myData.longitude);
-									NowBusStop(myData.latitude,
-											myData.longitude);
-									updateLCD();
-								}
+						if(data[nowIdx].isPeople == 1){
+							for(int i = 0;i<4;i++){
+								HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8);
+								HAL_Delay(50);
 							}
-							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, 1); //GPS LED
-//							printf("\r\n%d: Lat: %f %c, Lon: %f %c, Alt: %f m, Satellites: %d HDOP: %f\r\n",
-//											Serialcnt, myData.latitude, myData.latSide, myData.longitude, myData.lonSide, myData.altitude, myData.satelliteCount, myData.hdop);
-							CheckGPS(myData.latitude, myData.longitude);
+						}
+						if(data[nowIdx].isPeople > 0 ){
+							isPeopleFlag = 1;
+						}
+						else{
+							isPeopleFlag = 0;
+							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 0);
+						}
+						if(data[nowIdx+1].isPeople > 0){
+							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 1); //LAMP2
+						}
+						else{
+							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 0); //LAMP2
 						}
 					}
+
+				if (HAL_GetTick() - ArriveTick >= 300) {
+					ArriveTick = HAL_GetTick();
+					HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0);
+					if(isPeopleFlag){
+						HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+					}
+					if (helpBuzzer == 0 || helpBuzzer == 2 || helpBuzzer == 4) {
+
+						HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
+					}
+					helpBuzzer++;
+				}
+//					if (dataReceived) {
+//						parseGPSData(rxBuffer, RX3_BUFFER_SIZE);
+//						dataReceived = 0;
+//					}
+//					if (HAL_GetTick() - GPSTick >= 1000) {
+//						GPSTick = HAL_GetTick();
+//						//printf("CNT : %d\r\n", checkGPSCnt);
+//						if (checkGPSCnt >= 2) {
+//							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
+//							if (IOMode == 0) {
+//								LCD_Write_Arrive(data[nowIdx]);
+//								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
+//								ArriveFlag = 1;
+//								helpBuzzer = 0;
+//							}
+//
+//							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13); //Stop LED
+//							IOMode = 1;
+//						} else {
+//							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
+//							if (IOMode == 1) {
+//								nowIdx++;
+//								updateLCD();
+//								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
+//								ArriveFlag = 0;
+//							}
+//
+//							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0); //Stop LED
+//							IOMode = 0;
+//						}
+//						checkGPSCnt = 0;
+//					}
+
+//					if (HAL_GetTick() - GPSFIXTick >= 100) {
+//						//printf("%s\r\n", DataBuffer);
+//						nmea_parse(&myData, DataBuffer);
+//						if (myData.fix == 0) {
+//							GPSFIXTick = HAL_GetTick();
+//							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
+//							//printf("%d: No fix\r\n", Serialcnt);
+//							Serialcnt++;
+//						} else {
+//							if (NowBusStopFlag == 0) {
+//								if (myData.latitude > 0
+//										&& myData.longitude > 0) {
+//
+//									//printf("%f, %f\r\n", myData.latitude, myData.longitude);
+//									NowBusStop(myData.latitude,
+//											myData.longitude);
+//									updateLCD();
+//								}
+//							}
+//							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, 1); //GPS LED
+////							printf("\r\n%d: Lat: %f %c, Lon: %f %c, Alt: %f m, Satellites: %d HDOP: %f\r\n",
+////											Serialcnt, myData.latitude, myData.latSide, myData.longitude, myData.lonSide, myData.altitude, myData.satelliteCount, myData.hdop);
+//							CheckGPS(myData.latitude, myData.longitude);
+//						}
+//					}
 					if (HAL_GetTick() - BtnTick >= 2000 && pushingFlag) {
 						pushingFlag = 0;
 						upDownFlag = (upDownFlag + 1) % 2;
 						HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
 						HAL_Delay(100);
 						HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0);
+						if(nowIdx == 0){
+							while(data[++nowIdx].busTP != '2');
+						}
+						else{
+							nowIdx = 0;
+						}
 						updateLCD();
-					}
-					if (NowBusStopFlag) {
-						if (HAL_GetTick() - ArriveTick >= 100) {
-							ArriveTick = HAL_GetTick();
-							printf("isPeople : %d\r\n", data[nowIdx].isPeople);
-							if (data[nowIdx].isPeople == 1) {
-								if (ArriveFlag == 1) {
-									HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
-								} else {
-									HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 1); //LAMP1
-								}
-							}
-							if (data[nowIdx].isPeople == 2) {
-								if (ArriveFlag == 1) {
-									HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
-									if (helpBuzzer % 2 == 0
-											&& (helpBuzzer + 1) % 5
-											&& helpBuzzer < 11) {
-
-										HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8);
-									}
-									helpBuzzer++;
-								} else {
-									HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 1); //LAMP1
-								}
-							}
-							if (data[nowIdx].isPeople == 0){
-								HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 0); //LAMP1
+						if(data[nowIdx].isPeople == 2){
+							helpBuzzer = 0;
+						}
+						if(data[nowIdx].isPeople == 1){
+							for(int i = 0;i<4;i++){
+								HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8);
+								HAL_Delay(50);
 							}
 						}
-
-						if (data[nowIdx + 1].isPeople >= 1) {
+						if(data[nowIdx].isPeople > 0 ){
+							isPeopleFlag = 1;
+						}
+						else{
+							isPeopleFlag = 0;
+							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 0);
+						}
+						if(data[nowIdx+1].isPeople > 0){
 							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 1); //LAMP2
-						} else {
+						}
+						else{
 							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 0); //LAMP2
 						}
 					}
 				}
-			}
-		}
-
-		else { //Remote Mode
-			uint8_t data[] = "1,604,1315";
-			uint8_t data3[] = "000033333@";
-			uint8_t uartLoraFlag = 0;
-
-			while (1) {
-				if (UART1_Rx_End) {
-
-					//printf("Re:%s, %d!!!!\r\n", UART1_Rx_Buffer, strlen(UART1_Rx_Buffer));
-					char *token;
-
-					token = strtok(UART1_Rx_Buffer, "!");
-					strncpy(data, token, 10);
-					printf("\r\nRe:%s!!!!!\r\n\r\n", data);
-
-					token = strtok(NULL, "!");
-					strncpy(data3, token, 10);
-					printf("\r\nRe:%s!!!!!\r\n\r\n", data3);
-
-					for (int i = 0; i < 50; i++) {
-						UART1_Rx_Buffer[i] = '\0';
-					}
-					//LoRa_SendData(UART1_Rx_Buffer, strlen((char*)UART1_Rx_Buffer));
-					UART1_Len = 0;
-					UART1_Rx_End = 0;
-					uartLoraFlag = 1;
-					asd = 0;
-				}
-				if (LoRaRxEnd) {
-					printf("LoRa : %s, %d\r\n", LoRaRxData, strlen(LoRaRxData));
-					asd++;
-					for (int i = 0; i < 11; i++) {
-						LoRaRxData[i] = '\0';
-					}
-					LoRaLen = 0;
-					LoRaRxEnd = 0;
-				}
-				if (HAL_GetTick() - LoRaTick >= 3000 && uartLoraFlag == 1) {
-					LoRaTick = HAL_GetTick();
-					if (asd < 2) {
-						if (asd % 2 == 0) {
-							printf("data : %s\r\n", data);
-							LoRa_SendData(data, sizeof(data) - 1);
-							//printf("%s\r\n", data);
-						} else {
-							printf("data3 : %s\r\n", data3);
-							LoRa_SendData(data3, sizeof(data3) - 1);
-							//printf("%s\r\n", data3);
-						}
-					} else {
-						uartLoraFlag = 0;
-					}
+//					if (NowBusStopFlag) {
+//						if (HAL_GetTick() - ArriveTick >= 100) {
+//							ArriveTick = HAL_GetTick();
+//							printf("isPeople : %d\r\n", data[nowIdx].isPeople);
+//							if (data[nowIdx].isPeople == 1) {
+//								if (ArriveFlag == 1) {
+//									HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+//								} else {
+//									HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 1); //LAMP1
+//								}
+//							}
+//							if (data[nowIdx].isPeople == 2) {
+//								if (ArriveFlag == 1) {
+//									HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+//									if (helpBuzzer % 2 == 0
+//											&& (helpBuzzer + 1) % 5
+//											&& helpBuzzer < 11) {
+//
+//										HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8);
+//									}
+//									helpBuzzer++;
+//								} else {
+//									HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 1); //LAMP1
+//								}
+//							}
+//							if (data[nowIdx].isPeople == 0){
+//								HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 0); //LAMP1
+//							}
+//						}
+//
+//						if (data[nowIdx + 1].isPeople >= 1) {
+//							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 1); //LAMP2
+//						} else {
+//							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 0); //LAMP2
+//						}
+//					}
 				}
 			}
 		}
+
+//		else { //Remote Mode
+//			uint8_t data[] = "1,604,1315";
+//			uint8_t data3[] = "000033333@";
+//			uint8_t uartLoraFlag = 0;
+//
+//			while (1) {
+//				if (UART1_Rx_End) {
+//
+//					//printf("Re:%s, %d!!!!\r\n", UART1_Rx_Buffer, strlen(UART1_Rx_Buffer));
+//					char *token;
+//
+//					token = strtok(UART1_Rx_Buffer, "!");
+//					strncpy(data, token, 10);
+//					printf("\r\nRe:%s!!!!!\r\n\r\n", data);
+//
+//					token = strtok(NULL, "!");
+//					strncpy(data3, token, 10);
+//					printf("\r\nRe:%s!!!!!\r\n\r\n", data3);
+//
+//					for (int i = 0; i < 50; i++) {
+//						UART1_Rx_Buffer[i] = '\0';
+//					}
+//					//LoRa_SendData(UART1_Rx_Buffer, strlen((char*)UART1_Rx_Buffer));
+//					UART1_Len = 0;
+//					UART1_Rx_End = 0;
+//					uartLoraFlag = 1;
+//					asd = 0;
+//				}
+//				if (LoRaRxEnd) {
+//					printf("LoRa : %s, %d\r\n", LoRaRxData, strlen(LoRaRxData));
+//					asd++;
+//					for (int i = 0; i < 11; i++) {
+//						LoRaRxData[i] = '\0';
+//					}
+//					LoRaLen = 0;
+//					LoRaRxEnd = 0;
+//				}
+//				if (HAL_GetTick() - LoRaTick >= 3000 && uartLoraFlag == 1) {
+//					LoRaTick = HAL_GetTick();
+//					if (asd < 2) {
+//						if (asd % 2 == 0) {
+//							printf("data : %s\r\n", data);
+//							LoRa_SendData(data, sizeof(data) - 1);
+//							//printf("%s\r\n", data);
+//						} else {
+//							printf("data3 : %s\r\n", data3);
+//							LoRa_SendData(data3, sizeof(data3) - 1);
+//							//printf("%s\r\n", data3);
+//						}
+//					} else {
+//						uartLoraFlag = 0;
+//					}
+//				}
+//			}
+//		}
 //
 //		HAL_Delay(100);
     /* USER CODE END WHILE */
@@ -1091,7 +1182,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	}
   /* USER CODE END 3 */
-}
+
 
 /**
   * @brief System Clock Configuration
