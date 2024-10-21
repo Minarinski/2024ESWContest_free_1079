@@ -3,7 +3,7 @@
 import sys
 import os
 print(os.getcwd())
-os.chdir('C:/Users/DSM2022/Documents/2024ESWContest_free_1079/BusInfo_Python')
+os.chdir('./BusInfo_Python')
 print(os.getcwd())
 import requests
 import xmltodict
@@ -18,9 +18,14 @@ from BusInfoPyQt import *
 import pyttsx3
 
 flag = 0
-GlobalArriveInfoList = []
+GlobalArriveInfoList = [{
+                    'ROUTE_NO': '999', 'DESTINATION': '', 'EXTIME_MIN': '',
+                    'MSG_TP': '', 'BusStopNm': '', 'CarNM': '', 'RouteID': '', 'isLowFloor': '0',
+                    'isSpeaked': 0
+                } for _ in range(20)]
 GlobalBoardsList = []
 speakList = []
+speakBordingList = []
 
 class ApiThread(QThread):
     update_arrive_info = pyqtSignal(list)
@@ -33,11 +38,11 @@ class ApiThread(QThread):
         
 
     def run(self):
-        while True:
+        while self.key:
             response = requests.get(f'http://openapitraffic.daejeon.go.kr/api/rest/arrive/getArrInfoByStopID?serviceKey={self.key}&BusStopID={self.BusStopID}')
             ArriveInfoDict = xmltodict.parse(response.text)
             ArriveInfoListBefore = []
-            for ArriveInfo in ArriveInfoDict['ServiceResult']['msgBody']['itemList']:
+            for idx, ArriveInfo in enumerate(ArriveInfoDict['ServiceResult']['msgBody']['itemList']):
                 BusStopNm = '운행대기'
                 RouteID = ''
                 CarNM = ''
@@ -64,8 +69,8 @@ class ApiThread(QThread):
                                 BusStopNm = BusStopDict['ServiceResult']['msgBody']['itemList'][0]['BUSSTOP_NM']
                     RouteID = ArriveInfo['ROUTE_CD']
                     CarNM = ArriveInfo['CAR_REG_NO']
-                    
-                    
+                
+                global GlobalArriveInfoList
                 ArriveInfoListBefore.append([ArriveInfo['ROUTE_NO'], {
                     'ROUTE_NO': ArriveInfo['ROUTE_NO'],
                     'DESTINATION': ArriveInfo['DESTINATION'],
@@ -74,7 +79,8 @@ class ApiThread(QThread):
                     'BusStopNm': BusStopNm,
                     'CarNM': CarNM,
                     'RouteID': RouteID,
-                    'isLowFloor': '0'
+                    'isLowFloor': '0',
+                    'isSpeaked': GlobalArriveInfoList[idx]['isSpeaked']
                 }])
             ArriveInfoListBefore.sort()
             ArriveInfoList = [item[1] for item in ArriveInfoListBefore]
@@ -86,10 +92,11 @@ class ApiThread(QThread):
             while len(ArriveInfoList) % 5 != 0:
                 ArriveInfoList.append({
                     'ROUTE_NO': '999', 'DESTINATION': '', 'EXTIME_MIN': '',
-                    'MSG_TP': '', 'BusStopNm': '', 'CarNM': '', 'RouteID': '', 'isLowFloor': '0'
+                    'MSG_TP': '', 'BusStopNm': '', 'CarNM': '', 'RouteID': '', 'isLowFloor': '0',
+                    'isSpeaked': 0
                 })
             
-            global GlobalArriveInfoList
+            
             GlobalArriveInfoList = ArriveInfoList
             
             self.update_arrive_info.emit(ArriveInfoList)
@@ -119,7 +126,7 @@ class SerialThread(QThread):
 
     def run(self):
         pattern = re.compile('^0x02.*0x03$')
-        global flag, GlobalBoardsList, speakList, GlobalArriveInfoList
+        global flag, GlobalBoardsList, speakList, speakBordingList, GlobalArriveInfoList
         stx = 2
         stx = stx.to_bytes(1)
         etx = 3
@@ -132,17 +139,18 @@ class SerialThread(QThread):
                     dataSplit = data[4:-4].split(',')
                     idx = int(dataSplit[0]) + (5 * flag)
                     if dataSplit[1] == '1' or dataSplit[1] == '2':
-                        if '2'+str(idx) not in GlobalBoardsList and idx < 6:
+                        if '2'+str(idx) not in GlobalBoardsList:
                             if '1'+str(idx) in GlobalBoardsList:
                                 GlobalBoardsList.remove('1'+str(idx)) 
                             print(GlobalBoardsList, dataSplit[1]+str(idx)) 
                             GlobalBoardsList.append(dataSplit[1]+str(idx))
                             print(GlobalBoardsList)
                             n = GlobalArriveInfoList[idx]['ROUTE_NO']
-                            if dataSplit[1] == '1':
-                                speakList.append(n+'번 버스 호출 완료')
-                            else:
-                                speakList.append(n+'번 버스 호출 완료. 탑승 도움을 요청했습니다.')
+                            if n != '999':
+                                if dataSplit[1] == '1':
+                                    speakBordingList.append(n+'번 버스 호출 완료')
+                                else:
+                                    speakBordingList.append(n+'번 버스 호출 완료. 탑승 도움을 요청했습니다.')
                             
                             print(idx, GlobalBoardsList)
                             txData = []
@@ -150,13 +158,15 @@ class SerialThread(QThread):
                             if GlobalArriveInfoList[idx]['ROUTE_NO'][0] == '마':
                                 txData.append(str('00' + GlobalArriveInfoList[idx]['ROUTE_NO'][-1]))
                             else:
-                                txData.append(str(GlobalArriveInfoList[idx]['ROUTE_NO']))
+                                txData.append(str(GlobalArriveInfoList[idx]['ROUTE_NO'][:3]))
                             #txData.append(GlobalArriveInfoList[idx]['CarNM'][-4:])
                             txData.append('1315')
                             txData = ','.join(txData)
+                            print(txData+'qwertyuiop')
                             txData2 = []
                             txData2.append('0000')
                             txData2.append(str(self.BusStopArs) + '@')
+                            #txData2.append('23400' + '@')
                             txData2 = ''.join(txData2)
                             txData = (txData + '!' + txData2 + '!').encode('utf-8')                            
                             self.ser.write(stx + txData + etx)
@@ -166,7 +176,7 @@ class SerialThread(QThread):
                         if '2'+str(idx) in GlobalBoardsList:
                             GlobalBoardsList.remove('2'+str(idx))
                         n = GlobalArriveInfoList[idx]['ROUTE_NO']
-                        speakList.append(n+'번 버스 호출이 취소되었습니다')
+                        speakBordingList.append(n+'번 버스 호출이 취소되었습니다')
                         
                         txData = []
                         txData.append('0')
@@ -198,7 +208,7 @@ class PageFlagThread(QThread):
     def run(self):
         global flag
         while True:
-            time.sleep(7)
+            time.sleep(4)
             if self.pageCnt != 0:
                 self.pageFlag = (self.pageFlag + 1) % self.pageCnt
             self.update_page_flag.emit(self.pageFlag)
@@ -215,21 +225,20 @@ class SpeakThread(QThread):
         units = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
         tens = ["", "십", "이십", "삼십", "사십", "오십", "육십", "칠십", "팔십", "구십"]
         hundreds = ["", "백", "이백", "삼백", "사백", "오백", "육백", "칠백", "팔백", "구백"]
-
+        chuns = ["", "천", "이천", "삼천"]
         # 문자열을 정수로 변환
         num = int(num_str)
         
-        if num < 1 or num > 1000:
-            return "범위를 벗어난 숫자입니다. (1-1000)"
-
-        if num == 1000:
-            return "천"
 
         korean_number = ""
 
+        # 천의 자리
+        if num >= 1000:
+            korean_number += chuns[num // 1000]
+        
         # 백의 자리
         if num >= 100:
-            korean_number += hundreds[num // 100]
+            korean_number += hundreds[num % 1000 // 100]
         
         # 십의 자리
         if num >= 10:
@@ -245,16 +254,23 @@ class SpeakThread(QThread):
             self.engine.say(text)
         elif text[0] == '마':
             self.engine.say(text[:2] + self.number_to_korean(text[2]) + text[3:])
-        else:
+        elif text[3] == '번':
             self.engine.say(self.number_to_korean(text[:3]) + text[3:])
+        else:
+            self.engine.say(self.number_to_korean(text[:4]) + text[4:])
+            
         self.engine.runAndWait()
     
     def run(self):
         global speakList
         while True:
-            if speakList:
+            if speakBordingList:
+                self.speak(speakBordingList.pop(0))
+                
+            elif speakList:
+                time.sleep(5)
                 self.speak(speakList.pop(0))
-                time.sleep(3)
+                
 
 class BusArrivalApp(QtWidgets.QDialog):
     def __init__(self):
@@ -292,7 +308,7 @@ class BusArrivalApp(QtWidgets.QDialog):
         self.api_thread.update_arrive_info.connect(self.updateArriveInfo)
         self.api_thread.start()
 
-        self.serial_thread = SerialThread('COM8', self.pageFlag, self.BusStopArs)
+        self.serial_thread = SerialThread('COM3', self.pageFlag, self.BusStopArs)
         self.serial_thread.update_boarding_info.connect(self.updateBoardingInfo)
         self.serial_thread.start()
 
@@ -312,7 +328,7 @@ class BusArrivalApp(QtWidgets.QDialog):
         
         self.speakTimer = QTimer()
         self.speakTimer.timeout.connect(self.guideSound)
-        self.speakTimer.start(40000)
+        self.speakTimer.start(240000)
 
     def setupUi(self):
         self.ui = Ui_Dialog()
@@ -359,7 +375,10 @@ class BusArrivalApp(QtWidgets.QDialog):
         for i in range(4):
             self.BoardingUiList[i].setText('')
         
-        for i in range(len(GlobalBoardsList)):
+        GlobalBoardsListLen = len(GlobalBoardsList)
+        if GlobalBoardsListLen > 4:
+            GlobalBoardsListLen = 4
+        for i in range(GlobalBoardsListLen):
             if self.ArriveInfoList[int(GlobalBoardsList[i][1:])]['ROUTE_NO'] != '999':
                 if GlobalBoardsList[i][0] == '1':
                     self.BoardingUiList[i].setStyleSheet("color: rgb(255, 0, 0);")
@@ -368,7 +387,7 @@ class BusArrivalApp(QtWidgets.QDialog):
                     self.BoardingUiList[i].setStyleSheet("color: rgb(0, 255, 0);")
                     self.BoardingUiList[i].setText(self.ArriveInfoList[int(GlobalBoardsList[i][1:])]['ROUTE_NO'])
             else:
-                self.BoardingUiList[i].setText('')  
+                self.BoardingUiList[i].setText('')
 
     def updatePageFlag(self, pageFlag):
         self.pageFlag = pageFlag
@@ -415,9 +434,11 @@ class BusArrivalApp(QtWidgets.QDialog):
             self.labelList[i]['Minute'].setText('운행대기')
             if GlobalArriveInfoList[idx]['ROUTE_NO'] in self.nowArriveList:
                 self.nowArriveList.remove(GlobalArriveInfoList[idx]['ROUTE_NO'])
+                GlobalArriveInfoList[idx]['isSpeaked'] = 0
         elif self.ArriveInfoList[idx]['MSG_TP'] == '06':
-            if not self.nowArriveList:
+            if GlobalArriveInfoList[idx]['ROUTE_NO'] not in self.nowArriveList:
                 self.nowArriveList.append(GlobalArriveInfoList[idx]['ROUTE_NO'])
+                self.nowArriveList.sort()
             self.labelList[i]['Minute'].setStyleSheet("color: rgb(255, 0, 4);")
             self.labelList[i]['Minute'].setText('진입중')
             #print(idx, self.BoardingNumList)
@@ -425,7 +446,8 @@ class BusArrivalApp(QtWidgets.QDialog):
                 GlobalBoardsList.remove('1'+str(idx))
             if '2'+str(idx) in GlobalBoardsList:
                 GlobalBoardsList.remove('2'+str(idx))
-            if GlobalArriveInfoList[idx]['ROUTE_NO']+'번 버스가 진입중입니다. 뒤로 한걸음 물러서 주세요' not in speakList:
+            if GlobalArriveInfoList[idx]['isSpeaked'] == 0:
+                GlobalArriveInfoList[idx]['isSpeaked'] = 1
                 speakList.append(GlobalArriveInfoList[idx]['ROUTE_NO']+'번 버스가 진입중입니다. 뒤로 한걸음 물러서 주세요')
                 #self.serial_thread.update_boarding_info.emit(self.BoardingNumList)
                 #self.updateBoardingInfo(self.serial_thread , self.BoardingNumList)
@@ -433,9 +455,11 @@ class BusArrivalApp(QtWidgets.QDialog):
         elif int(self.ArriveInfoList[idx]['EXTIME_MIN']) <= 3:
             self.labelList[i]['Minute'].setStyleSheet("color: rgb(255, 0, 4);")
             self.labelList[i]['Minute'].setText('잠시 후\n도착')
+            
         else:
             if GlobalArriveInfoList[idx]['ROUTE_NO'] in self.nowArriveList:
                 self.nowArriveList.remove(GlobalArriveInfoList[idx]['ROUTE_NO'])
+                GlobalArriveInfoList[idx]['isSpeaked'] = 0
             self.labelList[i]['Minute'].setStyleSheet("color: rgb(255, 255, 255);")
             self.labelList[i]['Minute'].setText(self.ArriveInfoList[idx]['EXTIME_MIN'] + '분')
 
