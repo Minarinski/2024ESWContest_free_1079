@@ -1,9 +1,14 @@
+import sys
+import os
+os.chdir('./BusDataLoader_Python')
 import requests
 import xmltodict
+import json
 from BusDataLoaderPyQt import *
 import serial
 import serial.tools.list_ports
 import time
+import datetime
 
 from PyQt5.QtWidgets import QDialog, QLabel, QVBoxLayout, QPushButton
 from PyQt5.QtCore import Qt  # Qt 임포트 추가
@@ -15,7 +20,7 @@ ui = Ui_Dialog()
 serial_connection = None
 
 def getBusInfo(busname, busrouteno):
-    f = open('info.txt', 'r')
+    f = open('key.txt', 'r')
     lines = f.readlines()
     d = {}
     for line in lines:
@@ -41,10 +46,19 @@ def getBusInfo(busname, busrouteno):
     stx = stx.to_bytes(1)
     etx = 3
     etx = etx.to_bytes(1)
+    l = l[1:]
+    
+    dataJsonList = []
+    
     for idx, i in enumerate(l):
         ui.progressBar.setValue(int((idx+1)*(100/len(l))))
-        f = ','.join([i['busname'], i['busrouteno'], i['BusStopID'][:5]])
-        f = 'Data,'+f
+        if len(i['busrouteno']) == 1:
+            i['busrouteno'] = '00'+i['busrouteno']
+        f = ','.join([i['busname'], i['busrouteno'][:3], i['BusStopID'][:5]])
+        tp = dict_data['ServiceResult']['msgBody']['itemList'][idx]['BUSSTOP_TP']
+        if tp is None:
+            tp = '0'
+        f = 'Da,' + tp + ',' +f
         f = f + ('0'*(20-len(f)))
         print('First = '+f, len(f))
         f = f.encode('utf-8')
@@ -64,14 +78,23 @@ def getBusInfo(busname, busrouteno):
         serial_connection.write(s)
         rx = serial_connection.readline().decode('utf-8')
         print(list(rx))
-        # if 'N' not in rx:
-        #     break
+        
+        dataDict = {'busTP':tp, 'busName':i['busname'], 'busRouteNo':i['busrouteno'],'BusStopID':i['BusStopID'][:5],'GPS_LATI':i['GPS_LATI'][:8], 'GPS_LONG':i['GPS_LONG'][:9]}
+        dataJson = json.dumps(dataDict)
+        dataJsonList.append(dataJson)
     stx = 2
     stx = stx.to_bytes(1)
     etx = 3
     etx = etx.to_bytes(1)
     data = ('OutPut'+('0'*14)).encode('utf-8')
     serial_connection.write(data)
+    
+    current_date = datetime.datetime.now().strftime("%Y%m%d")
+    with open(f"{current_date}_{busrouteno}.txt", "w") as dataFile:
+        print(os.getcwd())
+        for data in dataJsonList:
+            dataFile.write(f"{data}\n")
+    
     msg_box()
             
 
