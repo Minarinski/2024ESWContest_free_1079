@@ -55,6 +55,8 @@ def getBusInfo(busname, busrouteno):
         if len(i['busrouteno']) == 1:
             i['busrouteno'] = '00'+i['busrouteno']
         f = ','.join([i['busname'], i['busrouteno'][:3], i['BusStopID'][:5]])
+        busStopName = dict_data['ServiceResult']['msgBody']['itemList'][idx]['BUSSTOP_NM']
+        print(busStopName)
         tp = dict_data['ServiceResult']['msgBody']['itemList'][idx]['BUSSTOP_TP']
         if tp is None:
             tp = '0'
@@ -79,8 +81,8 @@ def getBusInfo(busname, busrouteno):
         rx = serial_connection.readline().decode('utf-8')
         print(list(rx))
         
-        dataDict = {'busTP':tp, 'busName':i['busname'], 'busRouteNo':i['busrouteno'],'BusStopID':i['BusStopID'][:5],'GPS_LATI':i['GPS_LATI'][:8], 'GPS_LONG':i['GPS_LONG'][:9]}
-        dataJson = json.dumps(dataDict)
+        dataDict = {'busTP':tp, 'busName':i['busname'], 'busRouteNo':i['busrouteno'], 'busStopName':busStopName, 'BusStopID':i['BusStopID'][:5],'GPS_LATI':i['GPS_LATI'][:8], 'GPS_LONG':i['GPS_LONG'][:9]}
+        dataJson = json.dumps(dataDict, ensure_ascii=False)
         dataJsonList.append(dataJson)
     stx = 2
     stx = stx.to_bytes(1)
@@ -89,7 +91,7 @@ def getBusInfo(busname, busrouteno):
     data = ('OutPut'+('0'*14)).encode('utf-8')
     serial_connection.write(data)
     
-    current_date = datetime.datetime.now().strftime("%Y%m%d")
+    current_date = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     with open(f"{current_date}_{busrouteno}.txt", "w") as dataFile:
         print(os.getcwd())
         for data in dataJsonList:
