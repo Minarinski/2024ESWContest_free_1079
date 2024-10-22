@@ -11,13 +11,13 @@ import time
 import threading
 import re
 from datetime import datetime
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QObject, QMutex
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QObject#, Qmutex
 from PyQt5 import QtWidgets, QtCore, QtGui
 import serial
 from BusInfoPyQt import *
 import pyttsx3
 
-mutex = QMutex()
+#mutex = QMutex()
 
 flag = 0
 GlobalArriveInfoList = []
@@ -43,7 +43,7 @@ class ApiThread(QThread):
             response = requests.get(f'http://openapitraffic.daejeon.go.kr/api/rest/arrive/getArrInfoByStopID?serviceKey={self.key}&BusStopID={self.BusStopID}')
             ArriveInfoDict = xmltodict.parse(response.text)
             ArriveInfoListBefore = []
-            mutex.lock()
+            #mutex.lock()
             try:
                 for idx, ArriveInfo in enumerate(ArriveInfoDict['ServiceResult']['msgBody']['itemList']):
                     BusStopNm = '운행대기'
@@ -117,10 +117,12 @@ class ApiThread(QThread):
                 
                 GlobalArriveInfoList = ArriveInfoList
             finally:
-                mutex.unlock()
+                pass
+
+                #mutex.unlock()
             
             self.update_arrive_info.emit(ArriveInfoList)
-            time.sleep(2)
+            time.sleep(5)
 
 class SerialThread(QThread):
     update_boarding_info = pyqtSignal(list)
@@ -353,7 +355,7 @@ class BusArrivalApp(QtWidgets.QDialog):
         # GUI 업데이트를 위한 타이머
         self.timer = QTimer()
         self.timer.timeout.connect(self.updateGui)
-        self.timer.start(1000)  # 1초마다 업데이트
+        self.timer.start(500)  # 1초마다 업데이트
         
         self.speakTimer = QTimer()
         self.speakTimer.timeout.connect(self.guideSound)
@@ -492,13 +494,14 @@ class BusArrivalApp(QtWidgets.QDialog):
                 GlobalBoardsList.remove('1'+str(idx))
             if '2'+str(idx) in GlobalBoardsList:
                 GlobalBoardsList.remove('2'+str(idx))
-            mutex.lock()
+            #mutex.lock()
             try:
                 if GlobalArriveInfoList[idx]['isSpeaked'] == 0:
                     GlobalArriveInfoList[idx]['isSpeaked'] = 1
                     speakList.append(GlobalArriveInfoList[idx]['ROUTE_NO']+'번 버스가 진입중입니다. 뒤로 한걸음 물러서 주세요')
             finally:
-                mutex.unlock()
+                pass
+                #mutex.unlock()
                 #self.serial_thread.update_boarding_info.emit(self.BoardingNumList)
                 #self.updateBoardingInfo(self.serial_thread , self.BoardingNumList)
                 #print(self.BoardingNumList)
