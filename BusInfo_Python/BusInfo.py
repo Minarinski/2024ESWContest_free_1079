@@ -11,11 +11,13 @@ import time
 import threading
 import re
 from datetime import datetime
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QObject
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QObject, QMutex
 from PyQt5 import QtWidgets, QtCore, QtGui
 import serial
 from BusInfoPyQt import *
 import pyttsx3
+
+mutex = QMutex()
 
 flag = 0
 GlobalArriveInfoList = []
@@ -468,9 +470,14 @@ class BusArrivalApp(QtWidgets.QDialog):
                 GlobalBoardsList.remove('1'+str(idx))
             if '2'+str(idx) in GlobalBoardsList:
                 GlobalBoardsList.remove('2'+str(idx))
-            if GlobalArriveInfoList[idx]['isSpeaked'] == 0:
-                GlobalArriveInfoList[idx]['isSpeaked'] = 1
-                speakList.append(GlobalArriveInfoList[idx]['ROUTE_NO']+'번 버스가 진입중입니다. 뒤로 한걸음 물러서 주세요')
+            
+            mutex.lock()
+            try:
+                if GlobalArriveInfoList[idx]['isSpeaked'] == 0:
+                    GlobalArriveInfoList[idx]['isSpeaked'] = 1
+                    speakList.append(GlobalArriveInfoList[idx]['ROUTE_NO']+'번 버스가 진입중입니다. 뒤로 한걸음 물러서 주세요')
+            finally:
+                mutex.unlock()
                 #self.serial_thread.update_boarding_info.emit(self.BoardingNumList)
                 #self.updateBoardingInfo(self.serial_thread , self.BoardingNumList)
                 #print(self.BoardingNumList)
