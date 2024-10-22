@@ -82,6 +82,11 @@ class ApiThread(QThread):
                             
                             break
                         else:
+                            if GlobalArriveInfo['ROUTE_NO'][0]=='마':
+                                if GlobalArriveInfo['ROUTE_NO'][-1] == ArriveInfo['ROUTE_NO']:
+                                    isSpeaked = GlobalArriveInfoList[idx]['isSpeaked']
+                                    
+                                    break
                             isSpeaked = 0
                             
 
@@ -172,6 +177,8 @@ class SerialThread(QThread):
                             txData.append(str(dataSplit[1]))
                             if GlobalArriveInfoList[idx]['ROUTE_NO'][0] == '마':
                                 txData.append(str('00' + GlobalArriveInfoList[idx]['ROUTE_NO'][-1]))
+                            elif len(GlobalArriveInfoList[idx]['ROUTE_NO']) == 4:
+                                txData.append("220")
                             else:
                                 txData.append(str(GlobalArriveInfoList[idx]['ROUTE_NO'][:3]))
                             #txData.append(GlobalArriveInfoList[idx]['CarNM'][-4:])
