@@ -372,7 +372,7 @@ class BusArrivalApp(QtWidgets.QDialog):
         self.showMaximized()
     
     def  keyPressEvent(self, e):
-        if e.key() == 32:
+        if e.key() == 16777268:
             global pageFix
             if pageFix:
                 pageFix = False
