@@ -650,7 +650,12 @@ void parseLora(uint8_t *loraData) {
 			if (atoi(data[i].busStopID) == arsID) {
 				data[i].isPeople = help;
 				printf("\r\n%d\r\n\r\n", i);
-				loraFlag = 1;
+				if(i == nowIdx){
+					loraFlag = 1;
+				}
+				else if(i == nowIdx+1){
+					loraFlag = 2;
+				}
 //				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
 //				HAL_Delay(100);
 //				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
@@ -968,8 +973,21 @@ int main(void)
 							isPeopleFlag = 0;
 							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 0);
 						}
+
+					}
+					if(loraFlag == 2){
+						loraFlag = 0;
 						if(data[nowIdx+1].isPeople > 0){
 							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 1); //LAMP2
+							if(data[nowIdx+1].isPeople == 2){
+								helpBuzzer = 0;
+							}
+							if(data[nowIdx+1].isPeople == 1){
+								for(int i = 0;i<4;i++){
+									HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8);
+									HAL_Delay(50);
+								}
+							}
 						}
 						else{
 							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 0); //LAMP2
