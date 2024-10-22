@@ -20,6 +20,9 @@ ui = Ui_Dialog()
 serial_connection = None
 
 def getBusInfo(busname, busrouteno):
+    
+    isBusNo = True
+    
     f = open('key.txt', 'r')
     lines = f.readlines()
     d = {}
@@ -37,67 +40,74 @@ def getBusInfo(busname, busrouteno):
                 BusRouteID = i['ROUTE_CD']
                 break
     print(BusRouteID)
-    response = requests.get('http://openapitraffic.daejeon.go.kr/api/rest/busRouteInfo/getStaionByRoute?serviceKey='+key+'&busRouteId='+BusRouteID)    
-    dict_data = xmltodict.parse(response.text)
-    l = []
-    for i in dict_data['ServiceResult']['msgBody']['itemList']:
-        l.append({'busname': busname, 'busrouteno' : busrouteno, 'BusStopID':i['BUS_STOP_ID'], 'GPS_LATI':i['GPS_LATI'], 'GPS_LONG':i['GPS_LONG']})
-    stx = 2
-    stx = stx.to_bytes(1)
-    etx = 3
-    etx = etx.to_bytes(1)
-    l = l[1:]
+    try:
+        response = requests.get('http://openapitraffic.daejeon.go.kr/api/rest/busRouteInfo/getStaionByRoute?serviceKey='+key+'&busRouteId='+BusRouteID)    
+        dict_data = xmltodict.parse(response.text)
+        l = []
+        for i in dict_data['ServiceResult']['msgBody']['itemList']:
+            l.append({'busname': busname, 'busrouteno' : busrouteno, 'BusStopID':i['BUS_STOP_ID'], 'GPS_LATI':i['GPS_LATI'], 'GPS_LONG':i['GPS_LONG']})
+    except:
+        msg_box_fail()
+        isBusNo = False
     
-    dataJsonList = []
-    
-    for idx, i in enumerate(l):
-        ui.progressBar.setValue(int((idx+1)*(100/len(l))))
-        i['busrouteno'] = ('0'*(4-len(i['busrouteno'])))+i['busrouteno']
+    if isBusNo:
+        stx = 2
+        stx = stx.to_bytes(1)
+        etx = 3
+        etx = etx.to_bytes(1)
+        l = l[1:]
+        
+        dataJsonList = []
+        
+        for idx, i in enumerate(l):
+            ui.progressBar.setValue(int((idx+1)*(100/len(l))))
+            i['busrouteno'] = ('0'*(4-len(i['busrouteno'])))+i['busrouteno']
+                
+            f = ','.join([i['busname'], i['busrouteno'], i['BusStopID'][:5]])
+            busStopName = dict_data['ServiceResult']['msgBody']['itemList'][idx]['BUSSTOP_NM']
+            print(busStopName)
+            tp = dict_data['ServiceResult']['msgBody']['itemList'][idx]['BUSSTOP_TP']
+            if tp is None:
+                tp = '0'
+            f = 'D,' + tp + ',' +f
+            f = f + ('0'*(20-len(f)))
+            print('First = '+f, len(f))
+            f = f.encode('utf-8')
             
-        f = ','.join([i['busname'], i['busrouteno'], i['BusStopID'][:5]])
-        busStopName = dict_data['ServiceResult']['msgBody']['itemList'][idx]['BUSSTOP_NM']
-        print(busStopName)
-        tp = dict_data['ServiceResult']['msgBody']['itemList'][idx]['BUSSTOP_TP']
-        if tp is None:
-            tp = '0'
-        f = 'D,' + tp + ',' +f
-        f = f + ('0'*(20-len(f)))
-        print('First = '+f, len(f))
-        f = f.encode('utf-8')
+            serial_connection.write(f)
+            rx = serial_connection.readline().decode('utf-8')
+            print(list(rx))
+            # if 'N' not in rx:
+            #     break
+            
+            s = ','.join([i['GPS_LATI'][:8], i['GPS_LONG'][:9]])
+            s = 'd,'+s
+            s = s + ('0'*(20-len(s)))
+            print('Second = '+s, len(s))    
+            s = s.encode('utf-8')
+            
+            serial_connection.write(s)
+            rx = serial_connection.readline().decode('utf-8')
+            print(list(rx))
+            
+            dataDict = {'busTP':tp, 'busName':i['busname'], 'busRouteNo':i['busrouteno'], 'busStopName':busStopName, 'BusStopID':i['BusStopID'][:5],'GPS_LATI':i['GPS_LATI'][:8], 'GPS_LONG':i['GPS_LONG'][:9]}
+            dataJson = json.dumps(dataDict, ensure_ascii=False)
+            dataJsonList.append(dataJson)
+        stx = 2
+        stx = stx.to_bytes(1)
+        etx = 3
+        etx = etx.to_bytes(1)
+        data = ('OutPut'+('0'*14)).encode('utf-8')
+        serial_connection.write(data)
         
-        serial_connection.write(f)
-        rx = serial_connection.readline().decode('utf-8')
-        print(list(rx))
-        # if 'N' not in rx:
-        #     break
+        current_date = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        with open(f"{current_date}_{busrouteno}.txt", "w") as dataFile:
+            print(os.getcwd())
+            for data in dataJsonList:
+                dataFile.write(f"{data}\n")
         
-        s = ','.join([i['GPS_LATI'][:8], i['GPS_LONG'][:9]])
-        s = 'd,'+s
-        s = s + ('0'*(20-len(s)))
-        print('Second = '+s, len(s))    
-        s = s.encode('utf-8')
-        
-        serial_connection.write(s)
-        rx = serial_connection.readline().decode('utf-8')
-        print(list(rx))
-        
-        dataDict = {'busTP':tp, 'busName':i['busname'], 'busRouteNo':i['busrouteno'], 'busStopName':busStopName, 'BusStopID':i['BusStopID'][:5],'GPS_LATI':i['GPS_LATI'][:8], 'GPS_LONG':i['GPS_LONG'][:9]}
-        dataJson = json.dumps(dataDict, ensure_ascii=False)
-        dataJsonList.append(dataJson)
-    stx = 2
-    stx = stx.to_bytes(1)
-    etx = 3
-    etx = etx.to_bytes(1)
-    data = ('OutPut'+('0'*14)).encode('utf-8')
-    serial_connection.write(data)
-    
-    current_date = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    with open(f"{current_date}_{busrouteno}.txt", "w") as dataFile:
-        print(os.getcwd())
-        for data in dataJsonList:
-            dataFile.write(f"{data}\n")
-    
-    msg_box()
+        msg_box()
+        ui.IsOpenLabel.setText("연결 끊김")
             
 
 def populate_ports():
@@ -153,6 +163,28 @@ def msg_box():
 
     layout = QVBoxLayout()  # 레이아웃 생성
     label = QLabel('<h2 style="text-align: center;">데이터 입력 완료</h2>')  # 중앙 정렬 텍스트
+    font = QFont("NanumGothic", 12)  # 나눔고딕 폰트 설정 (크기 12)
+    label.setFont(font)  # QLabel에 폰트 설정
+    layout.addWidget(label)  # 레이아웃에 텍스트 추가
+
+    button = QPushButton("확인")  # 확인 버튼
+    button.clicked.connect(dialog.accept)  # 버튼 클릭 시 다이얼로그 닫기
+    font = QFont("NanumGothic", 10)
+    button.setFont(font)
+    layout.addWidget(button)  # 레이아웃에 버튼 추가
+    
+    dialog.setLayout(layout)  # 다이얼로그 레이아웃 설정
+    dialog.exec_()  # 다이얼로그 실행        
+    
+def msg_box_fail():
+    dialog = QDialog()  # QDialog 생성
+    dialog.setWindowTitle("다운로드 실패")  # 제목 설정
+    dialog.setWindowFlag(Qt.FramelessWindowHint)  # 테두리 없는 창 설정 (필요시)
+
+    dialog.setStyleSheet("QDialog { border: 2px solid black; border-radius: 5px; background-color: white; }") 
+
+    layout = QVBoxLayout()  # 레이아웃 생성
+    label = QLabel('<h2 style="text-align: center;">해당 노선은 존재하지 않습니다.</h2>')  # 중앙 정렬 텍스트
     font = QFont("NanumGothic", 12)  # 나눔고딕 폰트 설정 (크기 12)
     label.setFont(font)  # QLabel에 폰트 설정
     layout.addWidget(label)  # 레이아웃에 텍스트 추가

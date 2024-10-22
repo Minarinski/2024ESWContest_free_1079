@@ -866,8 +866,17 @@ int main(void)
 	uint8_t ArriveFlag = 0;
 
 	int isPeopleFlag = 0;
-	while(strncmp(data[nowIdx++].busStopID, "12400", 5) != 0);
-	nowIdx--;
+	int isData = Flash_Read(DataFlashAddress);
+	if(isData < 65536){
+		while(strncmp(data[nowIdx++].busStopID, "12400", 5) != 0){
+			if (nowIdx >= 200){
+				nowIdx = 1;
+				break;
+
+			}
+		}
+		nowIdx--;
+	}
 	updateLCD();
 
   /* USER CODE END 2 */
