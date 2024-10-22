@@ -461,7 +461,6 @@ class BusArrivalApp(QtWidgets.QDialog):
             self.labelList[i]['Minute'].setText('운행대기')
             if GlobalArriveInfoList[idx]['ROUTE_NO'] in self.nowArriveList:
                 self.nowArriveList.remove(GlobalArriveInfoList[idx]['ROUTE_NO'])
-                GlobalArriveInfoList[idx]['isSpeaked'] = 0
                 
         elif self.ArriveInfoList[idx]['MSG_TP'] == '06':
             if GlobalArriveInfoList[idx]['ROUTE_NO'] not in self.nowArriveList:
