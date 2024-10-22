@@ -334,6 +334,9 @@ class BusArrivalApp(QtWidgets.QDialog):
         self.getKey("key.txt")
         self.getInfo("./info.txt")
 
+        response = requests.get(f'http://openapitraffic.daejeon.go.kr/api/rest/arrive/getArrInfoByStopID?serviceKey={self.key}&Bu sStopID={self.BusStopID}')
+            
+
         # QThreads
         self.api_thread = ApiThread(self.key, self.BusStopID, self.BusStopArs)
         self.api_thread.update_arrive_info.connect(self.updateArriveInfo)
