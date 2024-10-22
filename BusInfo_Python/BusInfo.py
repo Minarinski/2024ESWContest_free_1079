@@ -43,62 +43,66 @@ class ApiThread(QThread):
             response = requests.get(f'http://openapitraffic.daejeon.go.kr/api/rest/arrive/getArrInfoByStopID?serviceKey={self.key}&BusStopID={self.BusStopID}')
             ArriveInfoDict = xmltodict.parse(response.text)
             ArriveInfoListBefore = []
-            for idx, ArriveInfo in enumerate(ArriveInfoDict['ServiceResult']['msgBody']['itemList']):
-                BusStopNm = '운행대기'
-                RouteID = ''
-                CarNM = ''
+            mutex.lock()
+            try:
+                for idx, ArriveInfo in enumerate(ArriveInfoDict['ServiceResult']['msgBody']['itemList']):
+                    BusStopNm = '운행대기'
+                    RouteID = ''
+                    CarNM = ''
 
-                if ArriveInfo['MSG_TP'] != '07' and ArriveInfo['MSG_TP'] != '06':
-                    if len(ArriveInfo) != 2:
-                        #print(ArriveInfo, len(ArriveInfo))
-                        if 'LAST_STOP_ID' in ArriveInfo.keys():
-                            arsId = ArriveInfo['LAST_STOP_ID']
-                    elif len(ArriveInfo) == 2:
-                        print(ArriveInfo, len(ArriveInfo))
-                        if 'LAST_STOP_ID' in ArriveInfo[0].keys():
-                            arsId = ArriveInfo[0]['LAST_STOP_ID']
-                    else:
-                        arsId = None
-                    if len(ArriveInfo) != 0  and arsId:
-                        response = requests.get(f'http://openapitraffic.daejeon.go.kr/api/rest/stationinfo/getStationByUid?serviceKey={self.key}&arsId={arsId}')
-                        BusStopDict = xmltodict.parse(response.text)
-                        if isinstance(BusStopDict['ServiceResult']['msgBody']['itemList'], dict):
-                            if 'BUSSTOP_NM' in BusStopDict['ServiceResult']['msgBody']['itemList'].keys():
-                                BusStopNm = BusStopDict['ServiceResult']['msgBody']['itemList']['BUSSTOP_NM']
+                    if ArriveInfo['MSG_TP'] != '07' and ArriveInfo['MSG_TP'] != '06':
+                        if len(ArriveInfo) != 2:
+                            #print(ArriveInfo, len(ArriveInfo))
+                            if 'LAST_STOP_ID' in ArriveInfo.keys():
+                                arsId = ArriveInfo['LAST_STOP_ID']
+                        elif len(ArriveInfo) == 2:
+                            print(ArriveInfo, len(ArriveInfo))
+                            if 'LAST_STOP_ID' in ArriveInfo[0].keys():
+                                arsId = ArriveInfo[0]['LAST_STOP_ID']
                         else:
-                            if 'BUSSTOP_NM' in BusStopDict['ServiceResult']['msgBody']['itemList'][0].keys():
-                                BusStopNm = BusStopDict['ServiceResult']['msgBody']['itemList'][0]['BUSSTOP_NM']
-                    RouteID = ArriveInfo['ROUTE_CD']
-                    CarNM = ArriveInfo['CAR_REG_NO']
-                
-                global GlobalArriveInfoList
-                isSpeaked = GlobalArriveInfoList[idx]['isSpeaked'] if idx < len(GlobalArriveInfoList) else 0
-                ArriveInfoListBefore.append([ArriveInfo['ROUTE_NO'], {
-                    'ROUTE_NO': ArriveInfo['ROUTE_NO'],
-                    'DESTINATION': ArriveInfo['DESTINATION'],
-                    'EXTIME_MIN': ArriveInfo['EXTIME_MIN'],
-                    'MSG_TP': ArriveInfo['MSG_TP'],
-                    'BusStopNm': BusStopNm,
-                    'CarNM': CarNM,
-                    'RouteID': RouteID,
-                    'isLowFloor': '0',
-                    'isSpeaked': isSpeaked
-                }])
-            ArriveInfoListBefore.sort()
-            ArriveInfoList = [item[1] for item in ArriveInfoListBefore]
+                            arsId = None
+                        if len(ArriveInfo) != 0  and arsId:
+                            response = requests.get(f'http://openapitraffic.daejeon.go.kr/api/rest/stationinfo/getStationByUid?serviceKey={self.key}&arsId={arsId}')
+                            BusStopDict = xmltodict.parse(response.text)
+                            if isinstance(BusStopDict['ServiceResult']['msgBody']['itemList'], dict):
+                                if 'BUSSTOP_NM' in BusStopDict['ServiceResult']['msgBody']['itemList'].keys():
+                                    BusStopNm = BusStopDict['ServiceResult']['msgBody']['itemList']['BUSSTOP_NM']
+                            else:
+                                if 'BUSSTOP_NM' in BusStopDict['ServiceResult']['msgBody']['itemList'][0].keys():
+                                    BusStopNm = BusStopDict['ServiceResult']['msgBody']['itemList'][0]['BUSSTOP_NM']
+                        RouteID = ArriveInfo['ROUTE_CD']
+                        CarNM = ArriveInfo['CAR_REG_NO']
+                    
+                    global GlobalArriveInfoList
+                    isSpeaked = GlobalArriveInfoList[idx]['isSpeaked'] if idx < len(GlobalArriveInfoList) else 0
+                    ArriveInfoListBefore.append([ArriveInfo['ROUTE_NO'], {
+                        'ROUTE_NO': ArriveInfo['ROUTE_NO'],
+                        'DESTINATION': ArriveInfo['DESTINATION'],
+                        'EXTIME_MIN': ArriveInfo['EXTIME_MIN'],
+                        'MSG_TP': ArriveInfo['MSG_TP'],
+                        'BusStopNm': BusStopNm,
+                        'CarNM': CarNM,
+                        'RouteID': RouteID,
+                        'isLowFloor': '0',
+                        'isSpeaked': isSpeaked
+                    }])
+                ArriveInfoListBefore.sort()
+                ArriveInfoList = [item[1] for item in ArriveInfoListBefore]
 
-            for i in range(len(ArriveInfoList)):
-                if len(ArriveInfoList[i]['ROUTE_NO']) == 1:
-                    ArriveInfoList[i]['ROUTE_NO'] = '마을'+ArriveInfoList[i]['ROUTE_NO']
-            
-            while len(ArriveInfoList) % 5 != 0:
-                ArriveInfoList.append({
-                    'ROUTE_NO': '999', 'DESTINATION': '', 'EXTIME_MIN': '',
-                    'MSG_TP': '', 'BusStopNm': '', 'CarNM': '', 'RouteID': '', 'isLowFloor': '0'
-                })
-            
-            
-            GlobalArriveInfoList = ArriveInfoList
+                for i in range(len(ArriveInfoList)):
+                    if len(ArriveInfoList[i]['ROUTE_NO']) == 1:
+                        ArriveInfoList[i]['ROUTE_NO'] = '마을'+ArriveInfoList[i]['ROUTE_NO']
+                
+                while len(ArriveInfoList) % 5 != 0:
+                    ArriveInfoList.append({
+                        'ROUTE_NO': '999', 'DESTINATION': '', 'EXTIME_MIN': '',
+                        'MSG_TP': '', 'BusStopNm': '', 'CarNM': '', 'RouteID': '', 'isLowFloor': '0'
+                    })
+                
+                
+                GlobalArriveInfoList = ArriveInfoList
+            finally:
+                mutex.unlock()
             
             self.update_arrive_info.emit(ArriveInfoList)
             time.sleep(2)
