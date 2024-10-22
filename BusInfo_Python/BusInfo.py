@@ -74,7 +74,12 @@ class ApiThread(QThread):
                         CarNM = ArriveInfo['CAR_REG_NO']
                     
                     global GlobalArriveInfoList
-                    isSpeaked = GlobalArriveInfoList[idx]['isSpeaked'] if idx < len(GlobalArriveInfoList) else 0
+                    # 기존 isSpeaked 값을 유지하도록 수정
+                    if idx < len(GlobalArriveInfoList) and GlobalArriveInfoList[idx]['ROUTE_NO'] == ArriveInfo['ROUTE_NO']:
+                        isSpeaked = GlobalArriveInfoList[idx]['isSpeaked']
+                    else:
+                        isSpeaked = 0
+
                     ArriveInfoListBefore.append([ArriveInfo['ROUTE_NO'], {
                         'ROUTE_NO': ArriveInfo['ROUTE_NO'],
                         'DESTINATION': ArriveInfo['DESTINATION'],
