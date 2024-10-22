@@ -75,10 +75,15 @@ class ApiThread(QThread):
                     
                     global GlobalArriveInfoList
                     # 기존 isSpeaked 값을 유지하도록 수정
-                    if idx < len(GlobalArriveInfoList) and GlobalArriveInfoList[idx]['ROUTE_NO'] == ArriveInfo['ROUTE_NO']:
-                        isSpeaked = GlobalArriveInfoList[idx]['isSpeaked']
-                    else:
-                        isSpeaked = 0
+                    isSpeaked = 0
+                    for idx, GlobalArriveInfo in enumerate(GlobalArriveInfoList):
+                        if GlobalArriveInfo['ROUTE_NO'] == ArriveInfo['ROUTE_NO']:
+                            isSpeaked = GlobalArriveInfoList[idx]['isSpeaked']
+                            
+                            break
+                        else:
+                            isSpeaked = 0
+                            
 
                     ArriveInfoListBefore.append([ArriveInfo['ROUTE_NO'], {
                         'ROUTE_NO': ArriveInfo['ROUTE_NO'],
