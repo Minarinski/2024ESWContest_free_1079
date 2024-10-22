@@ -17,7 +17,7 @@ import serial
 from BusInfoPyQt import *
 import pyttsx3
 
-mutex = QMutex()
+#mutex = QMutex()
 
 flag = 0
 GlobalArriveInfoList = []
@@ -43,7 +43,7 @@ class ApiThread(QThread):
             response = requests.get(f'http://openapitraffic.daejeon.go.kr/api/rest/arrive/getArrInfoByStopID?serviceKey={self.key}&BusStopID={self.BusStopID}')
             ArriveInfoDict = xmltodict.parse(response.text)
             ArriveInfoListBefore = []
-            mutex.lock()
+            #mutex.lock()
             try:
                 for idx, ArriveInfo in enumerate(ArriveInfoDict['ServiceResult']['msgBody']['itemList']):
                     BusStopNm = '운행대기'
@@ -117,7 +117,8 @@ class ApiThread(QThread):
                 
                 GlobalArriveInfoList = ArriveInfoList
             finally:
-                mutex.unlock()
+                pass
+                #mutex.unlock()
             
             self.update_arrive_info.emit(ArriveInfoList)
             time.sleep(2)
@@ -204,6 +205,8 @@ class SerialThread(QThread):
                         txData.append('0')
                         if GlobalArriveInfoList[idx]['ROUTE_NO'][0] == '마':
                             txData.append(str('00' + GlobalArriveInfoList[idx]['ROUTE_NO'][-1]))
+                        elif len(GlobalArriveInfoList[idx]['ROUTE_NO']) == 4:
+                            txData.append("220")
                         else:
                             txData.append(str(GlobalArriveInfoList[idx]['ROUTE_NO']))
                         #txData.append(GlobalArriveInfoList[idx]['CarNM'][-4:])
@@ -293,9 +296,9 @@ class SpeakThread(QThread):
                 cntDownNum = 5
                 for i in range(5):
                     time.sleep(1)
-                    print(f"cnt! : {cntDownNum}")
+                    #print(f"cnt! : {cntDownNum}")
                     cntDownNum -= 1
-                    print(f"{cntDownNum}")
+                    #print(f"{cntDownNum}")
                 self.speak(speakList.pop(0))
                 
 
@@ -490,13 +493,14 @@ class BusArrivalApp(QtWidgets.QDialog):
                 GlobalBoardsList.remove('1'+str(idx))
             if '2'+str(idx) in GlobalBoardsList:
                 GlobalBoardsList.remove('2'+str(idx))
-            mutex.lock()
+            #mutex.lock()
             try:
                 if GlobalArriveInfoList[idx]['isSpeaked'] == 0:
                     GlobalArriveInfoList[idx]['isSpeaked'] = 1
                     speakList.append(GlobalArriveInfoList[idx]['ROUTE_NO']+'번 버스가 진입중입니다. 뒤로 한걸음 물러서 주세요')
             finally:
-                mutex.unlock()
+                pass
+                #mutex.unlock()
                 #self.serial_thread.update_boarding_info.emit(self.BoardingNumList)
                 #self.updateBoardingInfo(self.serial_thread , self.BoardingNumList)
                 #print(self.BoardingNumList)
