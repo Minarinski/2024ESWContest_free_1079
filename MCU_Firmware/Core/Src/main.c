@@ -200,7 +200,7 @@ void LCD_Write_Info(struct DataFlash nowData, struct DataFlash nextData) {
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
 	LCD_SendString(LCD_ADDR, nowData.busRouteno);
 	LCD_SendData(LCD_ADDR, 0);
-	for (int i = 0; i < 11; i++) {
+	for (int i = 0; i < 10; i++) {
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
 	}
 	//printf("flag = %d\r\n", upDownFlag);

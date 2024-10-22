@@ -1,6 +1,5 @@
 import sys
 import os
-os.chdir('./BusDataLoader_Python')
 import requests
 import xmltodict
 import json
@@ -19,11 +18,23 @@ ui = Ui_Dialog()
 
 serial_connection = None
 
+def resource_path(relative_path):
+    """ Get the absolute path to the resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 def getBusInfo(busname, busrouteno):
     
     isBusNo = True
-    
-    f = open('key.txt', 'r')
+    try:
+        f = open(resource_path('key.txt'), 'r')
+    except:
+        msg_box_fail()
     lines = f.readlines()
     d = {}
     for line in lines:
