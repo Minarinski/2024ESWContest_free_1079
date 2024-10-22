@@ -70,7 +70,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 struct DataFlash {
 	char busTP;
 	char busNM[5];
-	char busRouteno[5];
+	char busRouteno[6];
 	char busStopID[8];
 	char lati[16];
 	char longi[16];
@@ -661,6 +661,9 @@ void parseLora(uint8_t *loraData) {
 		help = loraData[0] - '0';
 		routeNo = (loraData[2] - '0') * 100 + (loraData[3] - '0') * 10
 				+ (loraData[4] - '0');
+		if(routeNo == 220){
+			routeNo = 2002;
+		}
 		busNM = (loraData[6] - '0') * 1000 + (loraData[7] - '0') * 100
 				+ (loraData[8] - '0') * 10 + (loraData[9] - '0');
 		printf("\r\nhelp : %d, routeNo : %d, busNM : %d\r\n\r\n", help, routeNo,
@@ -731,7 +734,7 @@ uint32_t BtnTick = 0;
 
 int asd = 2;
 
-int helpBuzzer = 0;
+int helpBuzzer = 100;
 
 uint8_t LoRaModeFlag = 0;
 
@@ -906,7 +909,7 @@ int main(void)
 						LCD_SendString(LCD_ADDR, "DATA DOWNLOAD");
 						LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
 						LCD_SendString(LCD_ADDR, "SUCCESS");
-					} else if ((!strncmp(UART1_Rx_Buffer, "Da", 2)
+					} else if ((!strncmp(UART1_Rx_Buffer, "D", 1)
 							|| !strncmp(UART1_Rx_Buffer, "d", 1))
 							&& InfoModeFlag == 0) {
 						DataFlashAddress = Flash_Write_Data(DataFlashAddress,

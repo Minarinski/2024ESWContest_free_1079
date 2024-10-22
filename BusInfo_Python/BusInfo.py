@@ -353,7 +353,7 @@ class BusArrivalApp(QtWidgets.QDialog):
         # GUI 업데이트를 위한 타이머
         self.timer = QTimer()
         self.timer.timeout.connect(self.updateGui)
-        self.timer.start(500)  # 1초마다 업데이트
+        self.timer.start(1000)  # 1초마다 업데이트
         
         self.speakTimer = QTimer()
         self.speakTimer.timeout.connect(self.guideSound)
