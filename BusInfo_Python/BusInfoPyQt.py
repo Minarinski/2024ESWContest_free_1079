@@ -18,7 +18,7 @@ class Ui_Dialog(object):
         self.label = QtWidgets.QLabel(Dialog)
         self.label.setGeometry(QtCore.QRect(0, 0, 1081, 1921))
         self.label.setText("")
-        self.label.setPixmap(QtGui.QPixmap(":/Background/image/asset/background.png"))
+        self.label.setPixmap(QtGui.QPixmap("image/asset/background.png"))
         self.label.setScaledContents(True)
         self.label.setObjectName("label")
         self.label_2 = QtWidgets.QLabel(Dialog)
@@ -406,15 +406,16 @@ class Ui_Dialog(object):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
         self.label_22.setText(_translate("Dialog", "네트워크 연결 중 입니다."))
-        self.label_23.setText(_translate("Dialog", "TextLabel"))
-        self.label_24.setText(_translate("Dialog", "TextLabel"))
-        self.cnt_down.setText(_translate("Dialog", "5"))
-        self.title.setText(_translate("Dialog", "busStop"))
+        self.label_23.setText(_translate("Dialog", ""))
+        self.label_24.setText(_translate("Dialog", ""))
+        self.cnt_down.setText(_translate("Dialog", "0"))
+        self.title.setText(_translate("Dialog", ""))
 import resources_rc
 
 
 if __name__ == "__main__":
     import sys
+    sys.path.append('.')
     app = QtWidgets.QApplication(sys.argv)
     Dialog = QtWidgets.QDialog()
     ui = Ui_Dialog()
