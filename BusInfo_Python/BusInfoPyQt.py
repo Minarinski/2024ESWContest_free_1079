@@ -387,6 +387,17 @@ class Ui_Dialog(object):
         self.cnt_down.setFont(font)
         self.cnt_down.setStyleSheet("color: rgb(0, 0, 255);")
         self.cnt_down.setObjectName("cnt_down")
+        self.title = QtWidgets.QLabel(Dialog)
+        self.title.setGeometry(QtCore.QRect(230, 20, 621, 121))
+        font = QtGui.QFont()
+        font.setFamily("맑은 고딕")
+        font.setPointSize(36)
+        font.setBold(True)
+        font.setWeight(75)
+        self.title.setFont(font)
+        self.title.setStyleSheet("color: rgb(255, 255, 255);")
+        self.title.setAlignment(QtCore.Qt.AlignCenter)
+        self.title.setObjectName("title")
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -398,6 +409,7 @@ class Ui_Dialog(object):
         self.label_23.setText(_translate("Dialog", "TextLabel"))
         self.label_24.setText(_translate("Dialog", "TextLabel"))
         self.cnt_down.setText(_translate("Dialog", "5"))
+        self.title.setText(_translate("Dialog", "busStop"))
 import resources_rc
 
 

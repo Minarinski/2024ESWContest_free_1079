@@ -1,2 +1,1 @@
-BusStopID=8001418
 BusStopArs=12400

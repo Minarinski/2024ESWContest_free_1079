@@ -31,16 +31,15 @@ pageFix = False
 class ApiThread(QThread):
     update_arrive_info = pyqtSignal(list)
 
-    def __init__(self, key, BusStopID, BusStopArs):
+    def __init__(self, key, BusStopArs):
         super().__init__()
         self.key = key
-        self.BusStopID = BusStopID
         self.BusStopArs = BusStopArs
         
 
     def run(self):
         while self.key:
-            response = requests.get(f'http://openapitraffic.daejeon.go.kr/api/rest/arrive/getArrInfoByStopID?serviceKey={self.key}&BusStopID={self.BusStopID}')
+            response = requests.get(f'http://openapitraffic.daejeon.go.kr/api/rest/arrive/getArrInfoByUid?serviceKey={self.key}&arsId={self.BusStopArs}')
             ArriveInfoDict = xmltodict.parse(response.text)
             ArriveInfoListBefore = []
             #mutex.lock()
@@ -311,7 +310,6 @@ class BusArrivalApp(QtWidgets.QDialog):
         self.now = datetime.now()
         
         self.key = ''
-        self.BusStopID = ''
         self.BusStopArs = ''
         self.ArriveInfoList = []
         self.pageFlag = 0
@@ -333,12 +331,15 @@ class BusArrivalApp(QtWidgets.QDialog):
         
         self.getKey("key.txt")
         self.getInfo("./info.txt")
+        
+        
 
-        response = requests.get(f'http://openapitraffic.daejeon.go.kr/api/rest/arrive/getArrInfoByStopID?serviceKey={self.key}&Bu sStopID={self.BusStopID}')
-            
+        response = requests.get(f'http://openapitraffic.daejeon.go.kr/api/rest/stationinfo/getStationByUid?serviceKey={self.key}&arsId={self.BusStopArs}')
+        ArriveInfoDict = xmltodict.parse(response.text)
+        self.ui.title.setText(ArriveInfoDict['ServiceResult']['msgBody']['itemList']['BUSSTOP_NM'])
 
         # QThreads
-        self.api_thread = ApiThread(self.key, self.BusStopID, self.BusStopArs)
+        self.api_thread = ApiThread(self.key, self.BusStopArs)
         self.api_thread.update_arrive_info.connect(self.updateArriveInfo)
         self.api_thread.start()
 
@@ -391,7 +392,6 @@ class BusArrivalApp(QtWidgets.QDialog):
                 for line in lines:
                     a, b = line.split('=')
                     d[a] = b.strip()
-                self.BusStopID = d['BusStopID']
                 self.BusStopArs = d['BusStopArs']
         except:
             print("info.txt file not found.")
